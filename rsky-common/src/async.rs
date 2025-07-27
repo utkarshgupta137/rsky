@@ -75,7 +75,8 @@ impl<T> AsyncBuffer<T> {
         let mut tries_with_no_results = self.tries_with_no_results.lock().unwrap();
         *tries_with_no_results += 1;
         let wait_time = cmp::min(
-            2u64.checked_pow(*tries_with_no_results).unwrap_or(2),
+            2u64.checked_pow(*tries_with_no_results)
+                .unwrap_or(SECOND as u64),
             SECOND as u64,
         );
         wait(wait_time);

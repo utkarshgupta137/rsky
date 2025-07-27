@@ -7,8 +7,9 @@ use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{Delete, ObjectCannedAcl, ObjectIdentifier};
 use lexicon_cid::Cid;
-use rsky_common::env::env_str;
 use rsky_common::get_random_str;
+
+const BUCKET: &str = "rsky-pds";
 
 struct MoveObject {
     from: String,
@@ -18,7 +19,7 @@ struct MoveObject {
 #[derive(Debug, Clone)]
 pub struct S3BlobStore {
     client: s3::Client,
-    pub bucket: String,
+    pub did: String,
 }
 
 // Intended to work with DigitalOcean Spaces Object Storage which is an
@@ -26,10 +27,7 @@ pub struct S3BlobStore {
 impl S3BlobStore {
     pub fn new(did: String, cfg: &SdkConfig) -> Self {
         let client = aws_sdk_s3::Client::new(cfg);
-        S3BlobStore {
-            client,
-            bucket: did,
-        }
+        S3BlobStore { client, did }
     }
 
     pub fn creator(cfg: &SdkConfig) -> Box<dyn Fn(String) -> S3BlobStore + '_> {
@@ -41,15 +39,15 @@ impl S3BlobStore {
     }
 
     fn get_tmp_path(&self, key: &String) -> String {
-        format!("tmp/{0}/{1}", self.bucket, key)
+        format!("tmp/{0}/{1}", self.did, key)
     }
 
     fn get_stored_path(&self, cid: Cid) -> String {
-        format!("blocks/{0}/{1}", self.bucket, cid)
+        format!("blocks/{0}/{1}", self.did, cid)
     }
 
     fn get_quarantined_path(&self, cid: Cid) -> String {
-        format!("quarantine/{0}/{1}", self.bucket, cid)
+        format!("quarantine/{0}/{1}", self.did, cid)
     }
 
     pub async fn put_temp(&self, bytes: Vec<u8>) -> Result<String> {
@@ -58,7 +56,7 @@ impl S3BlobStore {
         self.client
             .put_object()
             .body(body)
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(self.get_tmp_path(&key))
             .acl(ObjectCannedAcl::PublicRead)
             .send()
@@ -86,7 +84,7 @@ impl S3BlobStore {
         self.client
             .put_object()
             .body(body)
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(self.get_stored_path(cid))
             .acl(ObjectCannedAcl::PublicRead)
             .send()
@@ -114,7 +112,7 @@ impl S3BlobStore {
         let res = self
             .client
             .get_object()
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(self.get_stored_path(cid))
             .send()
             .await;
@@ -160,7 +158,7 @@ impl S3BlobStore {
         let res = self
             .client
             .head_object()
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(key)
             .send()
             .await;
@@ -170,7 +168,7 @@ impl S3BlobStore {
     async fn delete_key(&self, key: String) -> Result<()> {
         self.client
             .delete_object()
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(key)
             .send()
             .await?;
@@ -185,7 +183,7 @@ impl S3BlobStore {
         let deletes = Delete::builder().set_objects(Some(objects)).build()?;
         self.client
             .delete_objects()
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .delete(deletes)
             .send()
             .await?;
@@ -195,20 +193,15 @@ impl S3BlobStore {
     async fn move_object(&self, keys: MoveObject) -> Result<()> {
         self.client
             .copy_object()
-            .bucket(&self.bucket)
-            .copy_source(format!(
-                "{0}/{1}/{2}",
-                env_str("AWS_ENDPOINT_BUCKET").unwrap(),
-                self.bucket,
-                keys.from
-            ))
+            .bucket(BUCKET)
+            .copy_source(format!("{BUCKET}/{}/{}", self.did, keys.from))
             .key(keys.to)
             .acl(ObjectCannedAcl::PublicRead)
             .send()
             .await?;
         self.client
             .delete_object()
-            .bucket(&self.bucket)
+            .bucket(BUCKET)
             .key(keys.from)
             .send()
             .await?;

@@ -140,7 +140,6 @@ impl Resolver {
             }
             Err(err) => Err(err)?,
         }
-        drop(stmt);
         Ok(false)
     }
 

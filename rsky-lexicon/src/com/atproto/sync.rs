@@ -18,26 +18,22 @@ pub struct SubscribeReposCommitOperation {
 /// Represents an update of repository state. Note that empty commits are allowed,
 /// which include no repo data changes, but an update to rev and signature.
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubscribeReposCommit {
-    pub seq: i64,
-    pub time: DateTime<Utc>,
-    pub rebase: bool,
-    #[serde(rename = "tooBig")]
-    pub too_big: bool,
-    pub repo: String,
-    #[serde(deserialize_with = "deserialize_cid_v1")]
+    pub seq: u64,
+    pub rebase: bool,  // NOTE: DEPRECATED
+    pub too_big: bool, // NOTE: DEPRECATED
+    #[serde(rename = "repo")]
+    pub did: String,
     pub commit: Cid,
-    #[serde(
-        default = "default_resource",
-        deserialize_with = "deserialize_option_cid_v1"
-    )]
-    pub prev: Option<Cid>,
     pub rev: String,
     pub since: Option<String>,
     #[serde(with = "serde_bytes")]
     pub blocks: Vec<u8>,
     pub ops: Vec<SubscribeReposCommitOperation>,
-    pub blobs: Vec<String>,
+    pub blobs: Vec<String>, // NOTE: DEPRECATED
+    pub prev_data: Option<Cid>,
+    pub time: DateTime<Utc>,
 }
 
 /// Get the current commit CID & revision of the specified repo. Does not require auth.
@@ -113,6 +109,7 @@ pub struct SubscribeReposIdentity {
 pub struct SubscribeReposSync {
     pub seq: i64,
     pub did: String,
+    #[serde(with = "serde_bytes")]
     pub blocks: Vec<u8>,
     pub rev: String,
     pub time: DateTime<Utc>,

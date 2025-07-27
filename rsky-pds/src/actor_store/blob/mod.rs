@@ -65,7 +65,7 @@ pub struct GetBlobMetadataOutput {
 impl BlobReader {
     pub fn new(blobstore: S3BlobStore, db: Arc<DbConn>) -> Self {
         BlobReader {
-            did: blobstore.bucket.clone(),
+            did: blobstore.did.clone(),
             blobstore,
             db,
         }

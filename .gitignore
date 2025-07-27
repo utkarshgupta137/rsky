@@ -12,7 +12,8 @@ NOTE.md
 Rocket.toml
 *.pem
 **/data/
-db/
+rsky-relay/db/
+rsky-relay-labeler/db/
 *.db
 *.db-shm
 *.db-wal

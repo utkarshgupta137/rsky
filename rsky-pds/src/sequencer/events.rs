@@ -41,19 +41,19 @@ pub struct CommitEvtOp {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommitEvt {
-    pub rebase: bool,
-    #[serde(rename = "tooBig")]
-    pub too_big: bool,
-    pub repo: String,
+    pub rebase: bool,  // NOTE: DEPRECATED
+    pub too_big: bool, // NOTE: DEPRECATED
+    #[serde(rename = "repo")]
+    pub did: String,
     pub commit: Cid,
-    pub prev: Option<Cid>,
     pub rev: String,
     pub since: Option<String>,
     #[serde(with = "serde_bytes")]
     pub blocks: Vec<u8>,
     pub ops: Vec<CommitEvtOp>,
-    pub blobs: Vec<Cid>,
+    pub blobs: Vec<String>, // NOTE: DEPRECATED
     pub prev_data: Option<Cid>,
 }
 
@@ -80,6 +80,7 @@ pub struct AccountEvt {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct SyncEvt {
     pub did: String,
+    #[serde(with = "serde_bytes")]
     pub blocks: Vec<u8>,
     pub rev: String,
 }
@@ -109,9 +110,8 @@ impl Default for TypedCommitEvt {
             evt: CommitEvt {
                 rebase: false,
                 too_big: false,
-                repo: "".to_string(),
+                did: "".to_string(),
                 commit: Default::default(),
-                prev: None,
                 rev: "".to_string(),
                 since: None,
                 blocks: vec![],
@@ -245,9 +245,8 @@ pub async fn format_seq_commit(
     let evt = CommitEvt {
         rebase: false,
         too_big: false, // always false in Sync 1.1
-        repo: did.clone(),
+        did: did.clone(),
         commit: commit_data.commit_data.cid,
-        prev: commit_data.commit_data.prev,
         rev: commit_data.commit_data.rev,
         since: commit_data.commit_data.since,
         blocks: car_slice,

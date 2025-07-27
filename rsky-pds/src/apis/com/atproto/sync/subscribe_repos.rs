@@ -110,7 +110,7 @@ pub async fn subscribe_repos<'a>(
                             }
                         }
                     },
-                    _ => outbox_cursor = Some(cursor)
+                    _ => outbox_cursor = Some(cursor - 1)
                 }
             }
         }
@@ -148,15 +148,13 @@ pub async fn subscribe_repos<'a>(
                     match evt {
                         SeqEvt::TypedCommitEvt(commit) => {
                             let TypedCommitEvt { r#type, seq, time, evt } = commit;
-                            let CommitEvt { rebase, too_big, repo, commit, prev, rev, since, blocks, ops, blobs, prev_data} = evt;
+                            let CommitEvt { rebase, too_big, did, commit, rev, since, blocks, ops, blobs, prev_data} = evt;
                             let subscribe_commit_evt = SubscribeReposCommit {
-                                seq,
-                                time: from_str_to_utc(&time),
+                                seq: seq as _,
                                 rebase,
                                 too_big,
-                                repo,
+                                did,
                                 commit,
-                                prev,
                                 rev,
                                 since,
                                 blocks,
@@ -169,6 +167,8 @@ pub async fn subscribe_repos<'a>(
                                     action: op.action.to_string()
                                 }).collect::<Vec<SubscribeReposCommitOperation>>(),
                                 blobs: blobs.into_iter().map(|blob| blob.to_string()).collect::<Vec<String>>(),
+                                prev_data,
+                                time: from_str_to_utc(&time),
                             };
                             let message_frame = MessageFrame::new(subscribe_commit_evt, Some(MessageFrameOpts { r#type: Some(format!("#{0}",r#type)) }));
                             let binary = match message_frame.to_bytes() {
